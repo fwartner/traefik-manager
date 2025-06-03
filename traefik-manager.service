@@ -1,0 +1,33 @@
+[Unit]
+Description=Traefik Manager - Web interface for Traefik configuration
+Documentation=https://github.com/fwartner/traefik-manager
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=traefik-manager
+Group=traefik-manager
+WorkingDirectory=/opt/traefik-manager
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/traefik-manager/.env
+ExecStart=/usr/bin/node /opt/traefik-manager/.output/server/index.mjs
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=traefik-manager
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/traefik-manager
+ReadWritePaths=/etc/traefik
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

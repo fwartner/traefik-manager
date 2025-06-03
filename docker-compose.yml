@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  traefik-manager:
+    build: .
+    container_name: traefik-manager
+    restart: unless-stopped
+    
+    ports:
+      - "${PORT:-3000}:3000"
+    
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TRAEFIK_CONFIG_DIR=/etc/traefik/dynamic
+    
+    volumes:
+      # Mount your Traefik dynamic configuration directory
+      - "${TRAEFIK_CONFIG_DIR:-/etc/traefik/dynamic}:/etc/traefik/dynamic"
+      # Optional: Mount a custom config directory
+      # - ./traefik-config:/etc/traefik/dynamic
+    
+    labels:
+      # Traefik labels for auto-discovery (if using Traefik)
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-manager.rule=Host(`traefik-manager.local`)"
+      - "traefik.http.routers.traefik-manager.tls=true"
+      - "traefik.http.services.traefik-manager.loadbalancer.server.port=3000"
+    
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+    # If traefik network doesn't exist, create it with:
+    # docker network create traefik
