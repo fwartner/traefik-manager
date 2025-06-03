@@ -54,7 +54,7 @@
 import type { Host } from '~/composables/useHosts'
 
 interface Props {
-  hosts: Host[]
+  hosts: readonly Host[]
 }
 
 defineProps<Props>()
