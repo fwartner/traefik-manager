@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: |
+            {
+              "categories": [
+                {
+                  "title": "## 🚀 Features",
+                  "labels": ["feature", "enhancement"]
+                },
+                {
+                  "title": "## 🐛 Bug Fixes",
+                  "labels": ["bug", "fix"]
+                },
+                {
+                  "title": "## 📚 Documentation",
+                  "labels": ["documentation", "docs"]
+                },
+                {
+                  "title": "## 🔧 Maintenance",
+                  "labels": ["maintenance", "chore", "refactor"]
+                },
+                {
+                  "title": "## 📦 Dependencies",
+                  "labels": ["dependencies"]
+                }
+              ],
+              "template": "#{{CHANGELOG}}",
+              "pr_template": "- #{{TITLE}} (#{{NUMBER}})",
+              "empty_template": "- No changes in this release",
+              "transformers": [
+                {
+                  "pattern": "[\\-\\*] (\\[(...|TEST|CI|SKIP)\\])( )?(.+)",
+                  "target": "- $4"
+                }
+              ]
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push:
+    needs: generate-changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-release:
+    needs: [generate-changelog, build-and-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Update release with changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', '')
+            });
+
+            const changelog = `${{ needs.generate-changelog.outputs.changelog }}`;
+            
+            const dockerImage = `ghcr.io/${{ github.repository }}:${context.ref.replace('refs/tags/', '')}`;
+            
+            const releaseNotes = `
+## Docker Image
+\`\`\`bash
+docker pull ${dockerImage}
+\`\`\`
+
+## Multi-platform Support
+This release supports the following platforms:
+- linux/amd64 (Intel/AMD 64-bit)
+- linux/arm64 (ARM 64-bit - Apple Silicon, AWS Graviton)
+- linux/arm/v7 (ARM 32-bit - Raspberry Pi)
+
+## Changelog
+${changelog || 'No changes in this release'}
+
+## Installation
+### Docker Compose
+\`\`\`yaml
+services:
+  traefik-manager:
+    image: ${dockerImage}
+    # ... rest of your configuration
+\`\`\`
+
+### Docker Run
+\`\`\`bash
+docker run -d \\
+  --name traefik-manager \\
+  -p 3000:3000 \\
+  -v /etc/traefik/dynamic:/etc/traefik/dynamic \\
+  ${dockerImage}
+\`\`\`
+            `;
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              body: releaseNotes
+            });
