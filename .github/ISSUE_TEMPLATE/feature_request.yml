@@ -1,0 +1,127 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for Traefik Manager
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please fill out this template to help us understand your request.
+
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Search for existing requests
+      description: Please search to see if a similar feature request already exists.
+      options:
+        - label: I have searched the existing issues and feature requests
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem? Please describe what you're trying to accomplish.
+      placeholder: I'm frustrated when... / I need to... / It would be helpful if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: I would like to see... / The feature should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Describe any alternative solutions or workarounds you've considered.
+      placeholder: I've also considered... / As a workaround I currently...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my workflow
+        - High - Essential for my use case
+        - Critical - Blocking my adoption
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What area of Traefik Manager does this feature relate to?
+      options:
+        - User Interface / Frontend
+        - API / Backend
+        - Host Management
+        - TLS/SSL Configuration
+        - Traefik Integration
+        - Docker Integration
+        - Installation / Setup
+        - Security
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your specific use case and how this feature would help.
+      placeholder: |
+        I manage [X number] of hosts and need to...
+        My infrastructure setup includes...
+        This feature would help me...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockup
+    attributes:
+      label: Mockups or Examples
+      description: If applicable, provide mockups, screenshots, or examples from other tools.
+      placeholder: Drag and drop images here or describe the UI you envision
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation Willingness
+      description: Are you willing to help implement this feature?
+      options:
+        - label: I'd be willing to submit a pull request for this feature
+        - label: I'd be willing to help test this feature
+        - label: I'd be willing to help with documentation
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or information about the feature request.
+      placeholder: Any additional information that might be helpful...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have provided all the required information above
+          required: true
+        - label: This is a feature request, not a bug report or question
+          required: true
+        - label: I understand this request will be evaluated based on project goals and maintainer availability
+          required: true

@@ -119,42 +119,41 @@ jobs:
             });
 
             const changelog = `${{ needs.generate-changelog.outputs.changelog }}`;
-            
             const dockerImage = `ghcr.io/${{ github.repository }}:${context.ref.replace('refs/tags/', '')}`;
             
-            const releaseNotes = `
-## Docker Image
-\`\`\`bash
-docker pull ${dockerImage}
-\`\`\`
-
-## Multi-platform Support
-This release supports the following platforms:
-- linux/amd64 (Intel/AMD 64-bit)
-- linux/arm64 (ARM 64-bit - Apple Silicon, AWS Graviton)
-- linux/arm/v7 (ARM 32-bit - Raspberry Pi)
-
-## Changelog
-${changelog || 'No changes in this release'}
-
-## Installation
-### Docker Compose
-\`\`\`yaml
-services:
-  traefik-manager:
-    image: ${dockerImage}
-    # ... rest of your configuration
-\`\`\`
-
-### Docker Run
-\`\`\`bash
-docker run -d \\
-  --name traefik-manager \\
-  -p 3000:3000 \\
-  -v /etc/traefik/dynamic:/etc/traefik/dynamic \\
-  ${dockerImage}
-\`\`\`
-            `;
+            const releaseNotes = [
+              '## Docker Image',
+              '```bash',
+              `docker pull ${dockerImage}`,
+              '```',
+              '',
+              '## Multi-platform Support',
+              'This release supports the following platforms:',
+              '- linux/amd64 (Intel/AMD 64-bit)',
+              '- linux/arm64 (ARM 64-bit - Apple Silicon, AWS Graviton)',
+              '- linux/arm/v7 (ARM 32-bit - Raspberry Pi)',
+              '',
+              '## Changelog',
+              changelog || 'No changes in this release',
+              '',
+              '## Installation',
+              '### Docker Compose',
+              '```yaml',
+              'services:',
+              '  traefik-manager:',
+              `    image: ${dockerImage}`,
+              '    # ... rest of your configuration',
+              '```',
+              '',
+              '### Docker Run',
+              '```bash',
+              'docker run -d \\',
+              '  --name traefik-manager \\',
+              '  -p 3000:3000 \\',
+              '  -v /etc/traefik/dynamic:/etc/traefik/dynamic \\',
+              `  ${dockerImage}`,
+              '```'
+            ].join('\n');
 
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,

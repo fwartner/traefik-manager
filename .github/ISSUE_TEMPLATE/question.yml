@@ -1,0 +1,141 @@
+name: ❓ Question / Support
+description: Ask a question about using Traefik Manager or get help with configuration
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reaching out! Please fill out this template to help us understand your question.
+
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Search for existing answers
+      description: Please search documentation and existing issues first.
+      options:
+        - label: I have checked the README and documentation
+          required: true
+        - label: I have searched existing issues
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What area does your question relate to?
+      options:
+        - Installation / Setup
+        - Configuration
+        - Traefik Integration
+        - Docker / Containerization
+        - Host Management
+        - TLS/SSL Setup
+        - Troubleshooting
+        - Performance
+        - Security
+        - API Usage
+        - General Usage
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: Please describe your question in detail...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide context about your setup and what you're trying to achieve.
+      placeholder: |
+        My setup:
+        - Installation method: ...
+        - Traefik version: ...
+        - Operating system: ...
+        
+        What I'm trying to do:
+        ...
+        
+        What I've tried so far:
+        ...
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation Method
+      description: How did you install Traefik Manager?
+      options:
+        - Automatic installation script
+        - Docker Compose
+        - Docker CLI
+        - Manual installation
+        - Haven't installed yet
+        - Other (please specify in context)
+
+  - type: input
+    id: version
+    attributes:
+      label: Traefik Manager Version
+      description: What version are you using? (if applicable)
+      placeholder: e.g., 1.0.0, latest
+
+  - type: input
+    id: traefik-version
+    attributes:
+      label: Traefik Version
+      description: What version of Traefik are you using? (if applicable)
+      placeholder: e.g., 3.0.0, 2.11.0
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant Configuration
+      description: Share relevant configuration files (remove sensitive data)
+      placeholder: |
+        Environment variables:
+        PORT=3000
+        TRAEFIK_CONFIG_DIR=/etc/traefik/dynamic
+        
+        Traefik configuration:
+        ...
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Share any relevant log output (remove sensitive data)
+      placeholder: |
+        ```
+        Log output here...
+        ```
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other information that might be helpful.
+      placeholder: Any additional details...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have provided sufficient context for my question
+          required: true
+        - label: I have removed any sensitive information
+          required: true
+        - label: This is a question/support request, not a bug report or feature request
+          required: true
