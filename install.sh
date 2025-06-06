@@ -298,10 +298,7 @@ create_systemd_service() {
     log_info "Creating systemd service..."
     
     if [[ $EUID -eq 0 ]]; then
-        tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
-    else
-        sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
-    fi
+        cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
 Description=Traefik Manager - Web interface for Traefik configuration
 Documentation=https://github.com/fwartner/traefik-manager
@@ -336,10 +333,52 @@ ProtectControlGroups=true
 [Install]
 WantedBy=multi-user.target
 EOF
+    else
+        sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
+[Unit]
+Description=Traefik Manager - Web interface for Traefik configuration
+Documentation=https://github.com/fwartner/traefik-manager
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}
+Environment=NODE_ENV=production
+EnvironmentFile=${APP_DIR}/.env
+ExecStart=/usr/bin/node ${APP_DIR}/.output/server/index.mjs
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=${SERVICE_NAME}
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=${APP_DIR}
+ReadWritePaths=/etc/traefik
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    fi
     
     # Reload systemd and enable service
-    sudo systemctl daemon-reload
-    sudo systemctl enable ${SERVICE_NAME}
+    if [[ $EUID -eq 0 ]]; then
+        systemctl daemon-reload
+        systemctl enable ${SERVICE_NAME}
+    else
+        sudo systemctl daemon-reload
+        sudo systemctl enable ${SERVICE_NAME}
+    fi
     
     log_success "systemd service created and enabled"
 }
@@ -349,11 +388,22 @@ setup_firewall() {
     
     if command -v ufw &> /dev/null; then
         # Check if ufw is active
-        if sudo ufw status | grep -q "Status: active"; then
+        local ufw_status
+        if [[ $EUID -eq 0 ]]; then
+            ufw_status=$(ufw status)
+        else
+            ufw_status=$(sudo ufw status)
+        fi
+        
+        if echo "$ufw_status" | grep -q "Status: active"; then
             local port=$(grep "^PORT=" "$APP_DIR/.env" | cut -d'=' -f2)
             read -p "Should port $port be opened in the firewall? [y/N]: " open_port
             if [[ $open_port =~ ^[Yy]$ ]]; then
-                sudo ufw allow "$port"
+                if [[ $EUID -eq 0 ]]; then
+                    ufw allow "$port"
+                else
+                    sudo ufw allow "$port"
+                fi
                 log_success "Port $port opened in firewall"
             fi
         else
@@ -367,12 +417,22 @@ setup_firewall() {
 start_service() {
     log_info "Starting Traefik Manager service..."
     
-    sudo systemctl start ${SERVICE_NAME}
+    if [[ $EUID -eq 0 ]]; then
+        systemctl start ${SERVICE_NAME}
+    else
+        sudo systemctl start ${SERVICE_NAME}
+    fi
     
     # Wait a moment and check status
     sleep 3
     
-    if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
+    if [[ $EUID -eq 0 ]]; then
+        service_active=$(systemctl is-active ${SERVICE_NAME})
+    else
+        service_active=$(sudo systemctl is-active ${SERVICE_NAME})
+    fi
+    
+    if [[ "$service_active" == "active" ]]; then
         log_success "Service started successfully!"
         
         local port=$(grep "^PORT=" "$APP_DIR/.env" | cut -d'=' -f2)
