@@ -205,11 +205,19 @@ install_app_dependencies() {
     cd "$APP_DIR"
     
     # Install npm dependencies
-    sudo -u "$APP_USER" npm ci --only=production
+    if [[ $EUID -eq 0 ]]; then
+        su -s /bin/bash "$APP_USER" -c "npm ci --only=production"
+    else
+        sudo -u "$APP_USER" npm ci --only=production
+    fi
     
     # Build application
     log_info "Building application for production..."
-    sudo -u "$APP_USER" npm run build
+    if [[ $EUID -eq 0 ]]; then
+        su -s /bin/bash "$APP_USER" -c "npm run build"
+    else
+        sudo -u "$APP_USER" npm run build
+    fi
     
     log_success "Application dependencies installed and built"
 }
