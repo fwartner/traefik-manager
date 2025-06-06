@@ -239,10 +239,7 @@ configure_application() {
         
         # Create .env file
         if [[ $EUID -eq 0 ]]; then
-            su -s /bin/bash "$APP_USER" -c "tee '$APP_DIR/.env' > /dev/null" <<EOF
-        else
-            sudo -u "$APP_USER" tee "$APP_DIR/.env" > /dev/null <<EOF
-        fi
+            cat > "$APP_DIR/.env" <<EOF
 # Traefik Manager Configuration
 PORT=${APP_PORT}
 TRAEFIK_CONFIG_DIR=${TRAEFIK_DIR}
@@ -250,6 +247,17 @@ NODE_ENV=production
 NITRO_PORT=${APP_PORT}
 NITRO_HOST=0.0.0.0
 EOF
+            chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
+        else
+            sudo -u "$APP_USER" tee "$APP_DIR/.env" > /dev/null <<EOF
+# Traefik Manager Configuration
+PORT=${APP_PORT}
+TRAEFIK_CONFIG_DIR=${TRAEFIK_DIR}
+NODE_ENV=production
+NITRO_PORT=${APP_PORT}
+NITRO_HOST=0.0.0.0
+EOF
+        fi
         
         log_success "Configuration file created"
     else
@@ -289,7 +297,11 @@ EOF
 create_systemd_service() {
     log_info "Creating systemd service..."
     
-    sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
+    if [[ $EUID -eq 0 ]]; then
+        tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
+    else
+        sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null <<EOF
+    fi
 [Unit]
 Description=Traefik Manager - Web interface for Traefik configuration
 Documentation=https://github.com/fwartner/traefik-manager
