@@ -50,9 +50,16 @@ log_error() {
 
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        log_error "This script should not be run as root!"
-        log_info "Please run it as a normal user. It will ask for sudo rights when needed."
-        exit 1
+        log_warning "Running as root user detected!"
+        log_info "While this is supported, it's recommended to run as a normal user."
+        log_info "The script will proceed but some security restrictions may be bypassed."
+        echo
+        read -p "Continue as root? [y/N]: " continue_as_root
+        if [[ ! $continue_as_root =~ ^[Yy]$ ]]; then
+            log_info "Installation cancelled. Please run as a normal user for better security."
+            exit 1
+        fi
+        log_info "Continuing installation as root user..."
     fi
 }
 
@@ -80,7 +87,11 @@ install_dependencies() {
     log_info "Installing system dependencies..."
     
     # Update package list
-    sudo apt-get update -qq
+    if [[ $EUID -eq 0 ]]; then
+        apt-get update -qq
+    else
+        sudo apt-get update -qq
+    fi
     
     # Install required packages
     local packages=("curl" "wget" "git" "build-essential")
@@ -88,7 +99,11 @@ install_dependencies() {
     for package in "${packages[@]}"; do
         if ! dpkg -l | grep -q "^ii  $package "; then
             log_info "Installing $package..."
-            sudo apt-get install -y "$package"
+            if [[ $EUID -eq 0 ]]; then
+                apt-get install -y "$package"
+            else
+                sudo apt-get install -y "$package"
+            fi
         else
             log_info "$package is already installed"
         fi
@@ -114,8 +129,13 @@ install_nodejs() {
     log_info "Installing Node.js 20 LTS..."
     
     # Install NodeSource repository
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    if [[ $EUID -eq 0 ]]; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+    else
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
     
     # Verify installation
     if command -v node &> /dev/null && command -v npm &> /dev/null; then
@@ -132,7 +152,11 @@ create_user() {
     if id "$APP_USER" &>/dev/null; then
         log_info "User $APP_USER already exists"
     else
-        sudo useradd --system --home "$APP_DIR" --shell /bin/false "$APP_USER"
+        if [[ $EUID -eq 0 ]]; then
+            useradd --system --home "$APP_DIR" --shell /bin/false "$APP_USER"
+        else
+            sudo useradd --system --home "$APP_DIR" --shell /bin/false "$APP_USER"
+        fi
         log_success "User $APP_USER created"
     fi
 }
@@ -141,20 +165,36 @@ download_application() {
     log_info "Downloading Traefik Manager..."
     
     # Create application directory
-    sudo mkdir -p "$APP_DIR"
+    if [[ $EUID -eq 0 ]]; then
+        mkdir -p "$APP_DIR"
+    else
+        sudo mkdir -p "$APP_DIR"
+    fi
     
     # Clone repository
     if [[ -d "$APP_DIR/.git" ]]; then
         log_info "Repository already exists. Updating..."
         cd "$APP_DIR"
-        sudo -u "$APP_USER" git pull
+        if [[ $EUID -eq 0 ]]; then
+            su -s /bin/bash "$APP_USER" -c "git pull"
+        else
+            sudo -u "$APP_USER" git pull
+        fi
     else
         log_info "Cloning repository from GitHub..."
-        sudo git clone https://github.com/fwartner/traefik-manager.git "$APP_DIR"
+        if [[ $EUID -eq 0 ]]; then
+            git clone https://github.com/fwartner/traefik-manager.git "$APP_DIR"
+        else
+            sudo git clone https://github.com/fwartner/traefik-manager.git "$APP_DIR"
+        fi
     fi
     
     # Change ownership
-    sudo chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+    if [[ $EUID -eq 0 ]]; then
+        chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+    else
+        sudo chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+    fi
     
     log_success "Application downloaded"
 }
