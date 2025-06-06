@@ -50,16 +50,9 @@ log_error() {
 
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        log_warning "Running as root user detected!"
-        log_info "While this is supported, it's recommended to run as a normal user."
-        log_info "The script will proceed but some security restrictions may be bypassed."
+        log_info "Running as root user - this is fully supported!"
+        log_info "The installation will proceed with root privileges."
         echo
-        read -p "Continue as root? [y/N]: " continue_as_root
-        if [[ ! $continue_as_root =~ ^[Yy]$ ]]; then
-            log_info "Installation cancelled. Please run as a normal user for better security."
-            exit 1
-        fi
-        log_info "Continuing installation as root user..."
     fi
 }
 
