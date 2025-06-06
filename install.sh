@@ -238,7 +238,11 @@ configure_application() {
         TRAEFIK_DIR=${TRAEFIK_DIR:-$DEFAULT_TRAEFIK_DIR}
         
         # Create .env file
-        sudo -u "$APP_USER" tee "$APP_DIR/.env" > /dev/null <<EOF
+        if [[ $EUID -eq 0 ]]; then
+            su -s /bin/bash "$APP_USER" -c "tee '$APP_DIR/.env' > /dev/null" <<EOF
+        else
+            sudo -u "$APP_USER" tee "$APP_DIR/.env" > /dev/null <<EOF
+        fi
 # Traefik Manager Configuration
 PORT=${APP_PORT}
 TRAEFIK_CONFIG_DIR=${TRAEFIK_DIR}
@@ -257,16 +261,28 @@ EOF
         log_warning "Traefik configuration directory $TRAEFIK_DIR does not exist"
         read -p "Should it be created? [y/N]: " create_dir
         if [[ $create_dir =~ ^[Yy]$ ]]; then
-            sudo mkdir -p "$TRAEFIK_DIR"
-            sudo chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR"
+            if [[ $EUID -eq 0 ]]; then
+                mkdir -p "$TRAEFIK_DIR"
+                chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR"
+            else
+                sudo mkdir -p "$TRAEFIK_DIR"
+                sudo chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR"
+            fi
             log_success "Directory $TRAEFIK_DIR created"
         fi
     else
         # Ensure app user can access traefik config
-        sudo chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR" 2>/dev/null || {
-            log_warning "Could not set permissions for $TRAEFIK_DIR"
-            log_info "Make sure user $APP_USER has read/write access"
-        }
+        if [[ $EUID -eq 0 ]]; then
+            chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR" 2>/dev/null || {
+                log_warning "Could not set permissions for $TRAEFIK_DIR"
+                log_info "Make sure user $APP_USER has read/write access"
+            }
+        else
+            sudo chown -R "$APP_USER:$APP_USER" "$TRAEFIK_DIR" 2>/dev/null || {
+                log_warning "Could not set permissions for $TRAEFIK_DIR"
+                log_info "Make sure user $APP_USER has read/write access"
+            }
+        fi
     fi
 }
 
